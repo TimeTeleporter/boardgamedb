@@ -1,5 +1,26 @@
-use sqlx::Row;
 use std::error::Error;
+
+struct Game {
+    title: String,
+    designer: String,
+    minplayers: i32,
+    maxplayers: i32,
+}
+
+async fn create(game: &Game, pool: &sqlx::PgPool) -> Result<(), Box<dyn Error>> {
+    let query =
+        "INSERT INTO games (title, designer, minplayers, maxplayers) VALUES ($1, $2, $3, $4)";
+
+    sqlx::query(query)
+        .bind(&game.title)
+        .bind(&game.designer)
+        .bind(&game.minplayers)
+        .bind(&game.maxplayers)
+        .execute(pool)
+        .await?;
+
+    Ok(())
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -8,10 +29,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     sqlx::migrate!("./migrations").run(&pool).await?;
 
-    let res = sqlx::query("SELECT 1 + 1 as sum").fetch_one(&pool).await?;
+    let game = Game {
+        title: "Dune: Imperium".into(),
+        designer: "Paul Dennen".into(),
+        minplayers: 1,
+        maxplayers: 4,
+    };
 
-    let sum: i32 = res.get("sum");
-    println!("1 + 1 = {sum}");
+    create(&game, &pool).await?;
 
     Ok(())
 }
